@@ -57,7 +57,7 @@ En Colab, la primera celda clona el repo si `conecta/` no existe (`!git clone <u
 
 ---
 
-### Task 0 —: Esqueleto del repo
+### Task 0: Esqueleto del repo
 
 **Archivos:**
 - Crear: `.gitignore`, `pytest.ini` (`testpaths = tests`), `requirements.txt` (mlflow, shap, pytest), `conecta/__init__.py`, `tests/conftest.py`
@@ -72,7 +72,7 @@ En Colab, la primera celda clona el repo si `conecta/` no existe (`!git clone <u
 
 ---
 
-### Task 1 —: Carga y limpieza
+### Task 1: Carga y limpieza
 
 **Archivos:**
 - Crear: `conecta/datos.py`
@@ -121,7 +121,7 @@ def test_limpiar_eventos_dedup_y_fecha_local():
 
 ---
 
-### Task 2 —: Unificación de tickets
+### Task 2: Unificación de tickets
 
 **Archivos:**
 - Crear: `conecta/tickets.py`
@@ -156,7 +156,7 @@ def test_hash_estable():
 
 ---
 
-### Task 3 —: Etiquetas reconstruidas
+### Task 3: Etiquetas reconstruidas
 
 **Archivos:**
 - Crear: `conecta/etiquetas.py`
@@ -191,7 +191,7 @@ def test_alta_despues_del_corte_no_aparece(subs_df)
 
 ---
 
-### Task 4 —: Clasificación NLP de tickets (caché)
+### Task 4: Clasificación NLP de tickets (caché)
 
 **Archivos:**
 - Modificar: `conecta/tickets.py`
@@ -225,7 +225,7 @@ def test_cargar_clasificacion_esquema(tmp_path):     # CSV con las columnas exac
 
 ---
 
-### Task 5 —: Variables a la fecha de corte y panel
+### Task 5: Variables a la fecha de corte y panel
 
 **Archivos:**
 - Crear: `conecta/variables.py`
@@ -266,7 +266,7 @@ def test_indice_igual_a_clientes(...)                      # construir_matriz(..
 
 ---
 
-### Task 6 —: Folds temporales
+### Task 6: Folds temporales
 
 **Archivos:**
 - Crear: `conecta/validacion.py`
@@ -291,7 +291,7 @@ def test_sin_traslape():  # para todo fold: max(train) + 90 días <= eval
 
 ---
 
-### Task 7 —: Economía y decisión
+### Task 7: Economía y decisión
 
 **Archivos:**
 - Crear: `conecta/negocio.py`
@@ -323,7 +323,7 @@ def test_plan_desconocido_falla():             # KeyError con mensaje que nombra
 
 ---
 
-### Task 8 —: Modelos, evaluación y MLflow (4 corridas)
+### Task 8: Modelos, evaluación y MLflow (4 corridas)
 
 **Archivos:**
 - Crear: `conecta/modelos.py`
@@ -349,7 +349,7 @@ def test_plan_desconocido_falla():             # KeyError con mensaje que nombra
 
 ---
 
-### Task 9 —: Análisis del efecto de los llamados (spec §6.6)
+### Task 9: Análisis del efecto de los llamados (spec §6.6)
 
 **Archivos:**
 - Modificar: `solucion.ipynb` (sección propia). Si hace falta, un parámetro `filtro_filas` en `evaluar_corrida`.
@@ -365,7 +365,7 @@ def test_plan_desconocido_falla():             # KeyError con mensaje que nombra
 
 ---
 
-### Task 10 —: Modelo final y `predicciones.csv`
+### Task 10: Modelo final y `predicciones.csv`
 
 **Archivos:**
 - Modificar: `conecta/modelos.py` (agregar `validar_predicciones`)
@@ -394,7 +394,7 @@ def test_validar_falla(caso): ...  # ValueError cuyo mensaje nombra el problema
 
 ---
 
-### Task 11 —: Hallazgos
+### Task 11: Hallazgos
 
 **Archivos:**
 - Modificar: `solucion.ipynb` (sección "Hallazgos")
@@ -411,7 +411,7 @@ def test_validar_falla(caso): ...  # ValueError cuyo mensaje nombra el problema
 
 ---
 
-### Task 12 —: Producción, memo, bitácora y README
+### Task 12: Producción, memo, bitácora y README
 
 **Archivos:**
 - Crear: `MEMO.md`, `BITACORA_IA.md`, `README.md`
@@ -425,7 +425,7 @@ def test_validar_falla(caso): ...  # ValueError cuyo mensaje nombra el problema
 
 ---
 
-### Task 13 —: Corrida completa en Colab y publicación
+### Task 13: Corrida completa en Colab y publicación
 
 - [ ] **Paso 1:** crear el repo público en GitHub y hacer push.
 - [ ] **Paso 2:** abrir desde el botón del README en un runtime de Colab limpio, subir `datos_conecta.zip` y ejecutar "Ejecutar todo". Esperado: sin errores y `predicciones.csv` regenerado e idéntico al del repo (o con diferencias explicadas por la semilla).
@@ -434,7 +434,7 @@ def test_validar_falla(caso): ...  # ValueError cuyo mensaje nombra el problema
 
 ---
 
-### Task 14 — (bonus, solo si sobra tiempo; la escribe Claude): Dashboard Streamlit
+### Task 14 (bonus, solo si sobra tiempo; la escribe Claude): Dashboard Streamlit
 
 **Archivos:**
 - Crear: `dashboard/app.py`, `dashboard/requirements.txt`, `dashboard/clientes_dashboard.csv` (exportado por el notebook)
