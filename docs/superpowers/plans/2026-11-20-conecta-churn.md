@@ -451,3 +451,22 @@ def test_validar_falla(caso): ...  # ValueError cuyo mensaje nombra el problema
   - Controles de costo y efectividad que recalculan la decisión usando `negocio.py`.
 - [ ] **Paso 3:** probar localmente con `streamlit run dashboard/app.py`. Al cambiar la efectividad a 0,2, el número de contactados tiene que bajar.
 - [ ] **Paso 4:** publicar en Streamlit Community Cloud, poner el enlace en el README y hacer commit `feat: dashboard streamlit`.
+
+---
+
+## Anexo: nombres en inglés (instrucción del candidato, 2026-11-20)
+
+Los identificadores de código van en inglés. Las columnas de la fuente (`cliente_id`, `fecha_inicio`, …) y las de `predicciones.csv` (`cliente_id, probabilidad, contactar`) no cambian. La prosa, los comentarios y los docstrings van en español. Equivalencias con los nombres del plan:
+
+| Plan | Código |
+|---|---|
+| módulos `datos, tickets, etiquetas, variables, validacion, negocio, modelos` | `data, tickets, labels, features, validation, business, models` |
+| `Datos` (clientes, suscripciones, facturas, etiquetas, a_puntuar, eventos, tickets_raw, tickets) | `Data` (clients, subscriptions, invoices, labels, to_score, events, tickets_raw, tickets) |
+| `cargar_datos, normalizar_ciudad, limpiar_edad, limpiar_facturas (es_cobro_duplicado), limpiar_eventos (fecha_local), limpiar` | `load_data, normalize_city, clean_age, clean_invoices (is_duplicate_charge), clean_events (local_date), clean` |
+| `unificar_tickets, hash_texto` (columnas `fecha, tema_origen, texto, estado abierto/cerrado, fecha_resolucion, esquema`) | `unify_tickets, hash_text` (columnas `created_at, source_topic, text, status open/closed, resolved_at, schema`) |
+| `cortes_mensuales, activos_en, construir_etiquetas` (`fecha_corte`) | `monthly_cutoffs, active_at, build_labels` (`cutoff`) |
+| `TEMAS, regla_molesto, clasificar_textos, cargar_clasificacion` (`tema, conf_tema, p_amenaza, p_ironia, ira, molesto`) | `TOPICS, annoyed_rule, classify_texts, load_classification` (`topic, topic_conf, p_threat, p_irony, anger, annoyed`) |
+| `var_cliente, var_suscripcion, var_facturas, var_eventos, var_tickets, var_contactos, construir_matriz, construir_panel` | `client_features, subscription_features, invoice_features, event_features, ticket_features, contact_features, build_matrix, build_panel` |
+| `folds_temporales` | `temporal_folds` |
+| `PRECIOS, COSTO_CONTACTO, EFECTIVIDAD, MESES_VALOR, umbral, valor_esperado, decidir_contacto, valor_realizado, sensibilidad` | `PRICES, CONTACT_COST, EFFECTIVENESS, VALUE_MONTHS, threshold, expected_value, decide_contact, realized_value, sensitivity` |
+| `VARIABLES_BASE, VARIABLES_NO_ESTRUCTURADAS, crear_modelo, evaluar_corrida, registrar_corrida, validar_predicciones` | `BASE_FEATURES, UNSTRUCTURED_FEATURES, make_model, evaluate_run, log_run, validate_predictions` |
