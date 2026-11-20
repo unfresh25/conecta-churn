@@ -1,0 +1,18 @@
+# Datos crudos y material del enunciado (no se publican)
+datos/
+*.zip
+*.pdf
+inicio.ipynb
+# Artefactos locales
+mlruns/
+mlflow.db
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+# Material de apoyo con textos literales de tickets
+docs/superpowers/spikes/
+# Workspace del ejecutor del plan
+.superpowers/
