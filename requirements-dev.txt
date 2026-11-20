@@ -1,0 +1,14 @@
+# Entorno local que imita Google Colab (Python 3.13, versiones de Colab a nov-2026).
+pandas==2.2.3
+numpy==2.4.6
+scikit-learn==1.6.1
+lightgbm==4.6.0
+scipy==1.16.3
+shap==0.54.1
+matplotlib==3.10.0
+mlflow
+pytest
+jupyter
+nbconvert
+ipykernel
+# En macOS, LightGBM necesita libomp: `brew install libomp`.

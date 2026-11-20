@@ -1,0 +1,3 @@
+# Librerías que Google Colab no trae preinstaladas.
+# (pandas, numpy, scikit-learn, lightgbm, shap, matplotlib y pytest ya vienen en Colab)
+mlflow
