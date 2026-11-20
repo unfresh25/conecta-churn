@@ -55,3 +55,47 @@ def test_malformed_client_is_dropped():
 def test_hash_is_stable():
     assert hash_text(" Hola ") == hash_text("Hola")
     assert len(hash_text("Hola")) == 64
+
+
+# --- Clasificación (Tarea 4) -------------------------------------------------------------------
+import pytest
+
+from conecta.tickets import CLASSIFICATION_COLUMNS, TOPICS, annoyed_rule, load_classification
+
+
+def test_topics_are_the_eight_of_the_spec():
+    assert set(TOPICS) == {"cobro_doble", "cobro_no_reconocido", "aumento_precio", "app_se_cierra",
+                           "lentitud", "acceso_cuenta", "cambio_plan", "cancelar"}
+
+
+def test_annoyed_rule():
+    out = annoyed_rule(pd.Series([0.9, 0.1, 0.5, 0.1]), pd.Series([False, True, False, False]))
+    assert out.tolist() == [True, True, False, False]  # ironía 0,5 exacta no cuenta (estricto)
+
+
+def _classification_row(h="a" * 64):
+    return {"hash": h, "topic": "cobro_doble", "topic_conf": 0.9, "p_threat": 0.1,
+            "p_irony": 0.8, "anger": False, "annoyed": True}
+
+
+def test_load_classification_schema(tmp_path):
+    path = tmp_path / "c.csv"
+    pd.DataFrame([_classification_row()]).to_csv(path, index=False)
+    out = load_classification(path)
+    assert list(out.columns) == CLASSIFICATION_COLUMNS
+    assert out["annoyed"].dtype == bool and out["anger"].dtype == bool
+
+
+def test_load_classification_rejects_duplicate_hash(tmp_path):
+    path = tmp_path / "c.csv"
+    pd.DataFrame([_classification_row(), _classification_row()]).to_csv(path, index=False)
+    with pytest.raises(ValueError, match="hash"):
+        load_classification(path)
+
+
+def test_load_classification_rejects_text_column(tmp_path):
+    # el CSV versionado no debe llevar textos literales de clientes
+    path = tmp_path / "c.csv"
+    pd.DataFrame([{**_classification_row(), "text": "hola"}]).to_csv(path, index=False)
+    with pytest.raises(ValueError, match="text"):
+        load_classification(path)
