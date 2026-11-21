@@ -1,4 +1,3 @@
-"""Pruebas de variables a la fecha de corte: una por cada fuga posible y por cada caso del Foco de revisión."""
 import pandas as pd
 import pytest
 
@@ -45,14 +44,14 @@ IDX = pd.Index([1, 2, 3], name="cliente_id")
 def test_event_after_cutoff_not_counted_but_tz_edge_counts(data):
     ev = event_features(data, CUT, IDX)
     assert ev.loc[1, "logins_30d"] == 1
-    assert ev.loc[1, "crashes_30d"] == 1        # 2025-10-01T04:30Z = 30-sep en Bogotá: cuenta
+    assert ev.loc[1, "crashes_30d"] == 1        # 2025-10-01T04:30Z es 30-sep en Bogotá
     ev_prev = event_features(data, pd.Timestamp("2025-09-29"), IDX)
     assert ev_prev.loc[1, "crashes_30d"] == 0
 
 
 def test_invoice_loaded_after_cutoff_not_counted(data):
     data.invoices.loc[data.invoices["periodo"] == "2025-10", "fecha_vencimiento"] = pd.Timestamp("2025-09-20")
-    inv = invoice_features(data, CUT, IDX)  # la factura 2025-10 se cargó el 2-oct: no existe en el corte
+    inv = invoice_features(data, CUT, IDX)
     assert inv.loc[1, "overdue_unpaid"] == 0
 
 
@@ -79,7 +78,7 @@ def test_ticket_resolved_after_cutoff_is_open(data, classification):
 
 def test_csat_only_known_after_resolution(data, classification):
     tk = ticket_features(data, classification, CUT, IDX)
-    assert tk.loc[1, "csat_mean"] == 2.0       # el csat=5 de T2 aún no existía en el corte
+    assert tk.loc[1, "csat_mean"] == 2.0
 
 
 def test_unclassified_text_does_not_break(data, classification):
@@ -108,7 +107,7 @@ def test_client_and_subscription_features(data):
     assert cl.loc[2, "invalid_age"] == 1 and pd.isna(cl.loc[2, "age"])
     sub = subscription_features(data, CUT, IDX)
     assert sub.loc[1, "plan"] == "Premium" and sub.loc[1, "plan_changes"] == 1
-    assert pd.isna(sub.loc[2, "plan"])          # ya no está activo en el corte
+    assert pd.isna(sub.loc[2, "plan"])
 
 
 def test_build_panel_shape(data, classification):

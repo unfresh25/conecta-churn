@@ -1,13 +1,4 @@
-"""Carga y limpieza de las fuentes de Conecta+.
-
-Decisiones de limpieza (documentadas también en el notebook):
-- `ciudad`: 17 grafías -> 6 ciudades canónicas.
-- `edad`: valores fuera de [18, 100] (hay 0 y 999) se tratan como faltantes.
-- Facturas: el mismo `factura_id` cargado dos veces es una recarga del sistema (se elimina);
-  dos facturas con id distinto para el mismo (cliente, periodo, suscripción) son un cobro doble real
-  (se conserva y se marca).
-- Eventos: se deduplican por `event_id` y se lleva la marca de tiempo a la fecha local de Bogotá.
-"""
+"""Carga y limpieza de las fuentes. Los nombres de columna de la fuente se conservan."""
 from __future__ import annotations
 
 import gzip
@@ -20,6 +11,7 @@ from pathlib import Path
 import pandas as pd
 
 LOCAL_TZ = "America/Bogota"
+VALID_AGE = (18, 100)
 
 _CITY_MAP = {
     "bogota": "Bogotá", "bogota dc": "Bogotá",
@@ -33,7 +25,6 @@ _CITY_MAP = {
 
 @dataclass
 class Data:
-    """Todas las fuentes en memoria. Los nombres de columna de la fuente se conservan."""
     clients: pd.DataFrame
     subscriptions: pd.DataFrame
     invoices: pd.DataFrame
@@ -44,18 +35,21 @@ class Data:
     tickets: pd.DataFrame | None = None
 
 
+def _read_jsonl(lines) -> list[dict]:
+    return [json.loads(line) for line in lines if line.strip()]
+
+
 def load_data(path: str | Path) -> Data:
-    """Lee `conecta.db`, `tickets.jsonl` y `eventos.jsonl.gz` desde la carpeta descomprimida."""
     path = Path(path)
     with sqlite3.connect(path / "conecta.db") as con:
-        read = lambda table: pd.read_sql(f"SELECT * FROM {table}", con)  # noqa: E731
-        clients, subscriptions, invoices = read("clientes"), read("suscripciones"), read("facturas")
-        labels, to_score = read("etiquetas_entrenamiento"), read("clientes_a_puntuar")
+        tables = {t: pd.read_sql(f"SELECT * FROM {t}", con) for t in
+                  ["clientes", "suscripciones", "facturas", "etiquetas_entrenamiento", "clientes_a_puntuar"]}
     with open(path / "tickets.jsonl", encoding="utf-8") as f:
-        tickets_raw = [json.loads(line) for line in f if line.strip()]
+        tickets_raw = _read_jsonl(f)
     with gzip.open(path / "eventos.jsonl.gz", "rt", encoding="utf-8") as f:
-        events = pd.DataFrame([json.loads(line) for line in f if line.strip()])
-    return Data(clients, subscriptions, invoices, labels, to_score, events, tickets_raw)
+        events = pd.DataFrame(_read_jsonl(f))
+    return Data(tables["clientes"], tables["suscripciones"], tables["facturas"], tables["etiquetas_entrenamiento"],
+                tables["clientes_a_puntuar"], events, tickets_raw)
 
 
 def _ascii_key(text: str) -> str:
@@ -65,18 +59,19 @@ def _ascii_key(text: str) -> str:
 
 
 def normalize_city(s: pd.Series) -> pd.Series:
-    """Mapea las grafías de ciudad a 6 valores canónicos; lo desconocido queda NaN."""
+    """Lleva las 17 grafías a 6 ciudades; una grafía desconocida queda como NaN."""
     return s.map(lambda v: _CITY_MAP.get(_ascii_key(v)) if isinstance(v, str) else None).astype("object")
 
 
 def clean_age(s: pd.Series) -> pd.Series:
-    """Edad como float; fuera de [18, 100] se considera inválida (NaN)."""
+    """La fuente trae edades 0 y 999: fuera del rango válido se tratan como faltantes."""
     age = pd.to_numeric(s, errors="coerce").astype(float)
-    return age.where(age.between(18, 100))
+    return age.where(age.between(*VALID_AGE))
 
 
 def clean_invoices(f: pd.DataFrame) -> pd.DataFrame:
-    """Elimina recargas (mismo factura_id) y marca cobros dobles reales (id distinto, mismo periodo)."""
+    """Un `factura_id` repetido es una recarga del sistema y se descarta. Dos ids distintos para el mismo
+    cliente, periodo y suscripción son un cobro doble real: se conserva y se marca."""
     out = f.copy()
     for col in ("fecha_vencimiento", "fecha_pago", "fecha_carga"):
         out[col] = pd.to_datetime(out[col])
@@ -87,34 +82,25 @@ def clean_invoices(f: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_events(e: pd.DataFrame) -> pd.DataFrame:
-    """Deduplica por event_id y agrega `local_ts` y `local_date` (hora de Bogotá, sin zona)."""
     out = e.drop_duplicates("event_id").copy()
-    local = pd.to_datetime(out["ts"], utc=True).dt.tz_convert(LOCAL_TZ).dt.tz_localize(None)
-    out["local_ts"] = local
-    out["local_date"] = local.dt.normalize()
+    out["local_ts"] = pd.to_datetime(out["ts"], utc=True).dt.tz_convert(LOCAL_TZ).dt.tz_localize(None)
+    out["local_date"] = out["local_ts"].dt.normalize()
     return out.reset_index(drop=True)
 
 
+def _parse_dates(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    return df.assign(**{c: pd.to_datetime(df[c]) for c in columns})
+
+
 def clean(data: Data) -> Data:
-    """Aplica toda la limpieza y convierte las fechas a datetime."""
-    clients = data.clients.copy()
+    clients = _parse_dates(data.clients, ["fecha_alta", "fecha_contacto_retencion"])
     clients["ciudad"] = normalize_city(clients["ciudad"])
     clients["edad"] = clean_age(clients["edad"])
-    clients["fecha_alta"] = pd.to_datetime(clients["fecha_alta"])
-    clients["fecha_contacto_retencion"] = pd.to_datetime(clients["fecha_contacto_retencion"])
-
-    subs = data.subscriptions.copy()
-    subs["fecha_inicio"] = pd.to_datetime(subs["fecha_inicio"])
-    subs["fecha_fin"] = pd.to_datetime(subs["fecha_fin"])
-
-    labels = data.labels.copy()
-    labels["fecha_corte"] = pd.to_datetime(labels["fecha_corte"])
-
     return Data(
         clients=clients,
-        subscriptions=subs,
+        subscriptions=_parse_dates(data.subscriptions, ["fecha_inicio", "fecha_fin"]),
         invoices=clean_invoices(data.invoices),
-        labels=labels,
+        labels=_parse_dates(data.labels, ["fecha_corte"]),
         to_score=data.to_score.copy(),
         events=clean_events(data.events),
         tickets_raw=data.tickets_raw,

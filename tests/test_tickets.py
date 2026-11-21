@@ -1,8 +1,10 @@
 import datetime as dt
 
 import pandas as pd
+import pytest
 
-from conecta.tickets import hash_text, unify_tickets
+from conecta.tickets import (CLASSIFICATION_COLUMNS, TOPICS, annoyed_rule, hash_text, load_classification,
+                             unify_tickets)
 
 
 def test_unify_schema_a(tickets_raw):
@@ -19,7 +21,7 @@ def test_unify_schema_b(tickets_raw):
     df, _ = unify_tickets(tickets_raw)
     b = df[df["schema"] == "B"].iloc[0]
     assert b["cliente_id"] == 12386
-    assert b["text"].startswith("Me encanta pagar dos veces")  # primer mensaje del cliente, no del agente
+    assert b["text"].startswith("Me encanta pagar dos veces")
     assert b["status"] == "open"
     assert pd.isna(b["resolved_at"])
     assert pd.isna(b["csat"])
@@ -57,20 +59,14 @@ def test_hash_is_stable():
     assert len(hash_text("Hola")) == 64
 
 
-# --- Clasificación (Tarea 4) -------------------------------------------------------------------
-import pytest
-
-from conecta.tickets import CLASSIFICATION_COLUMNS, TOPICS, annoyed_rule, load_classification
-
-
 def test_topics_are_the_eight_of_the_spec():
     assert set(TOPICS) == {"cobro_doble", "cobro_no_reconocido", "aumento_precio", "app_se_cierra",
                            "lentitud", "acceso_cuenta", "cambio_plan", "cancelar"}
 
 
-def test_annoyed_rule():
+def test_annoyed_rule_threshold_is_strict():
     out = annoyed_rule(pd.Series([0.9, 0.1, 0.5, 0.1]), pd.Series([False, True, False, False]))
-    assert out.tolist() == [True, True, False, False]  # ironía 0,5 exacta no cuenta (estricto)
+    assert out.tolist() == [True, True, False, False]
 
 
 def _classification_row(h="a" * 64):
@@ -94,7 +90,6 @@ def test_load_classification_rejects_duplicate_hash(tmp_path):
 
 
 def test_load_classification_rejects_text_column(tmp_path):
-    # el CSV versionado no debe llevar textos literales de clientes
     path = tmp_path / "c.csv"
     pd.DataFrame([{**_classification_row(), "text": "hola"}]).to_csv(path, index=False)
     with pytest.raises(ValueError, match="text"):

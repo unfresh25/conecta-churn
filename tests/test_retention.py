@@ -1,4 +1,3 @@
-"""Desenlace de las llamadas de retención: baja posterior, retenidos y casos censurados."""
 import pandas as pd
 
 from conecta.retention import contact_outcomes, team_contacted
@@ -22,12 +21,12 @@ def _clients():
 
 def test_contact_outcomes():
     out = contact_outcomes(_clients(), _subs(), TODAY).set_index("cliente_id")
-    assert list(out.index) == [1, 2, 3, 4]                       # el 5 nunca fue contactado
+    assert list(out.index) == [1, 2, 3, 4]
     assert out.loc[1, "days_to_churn"] == 11 and out.loc[1, "churned_90d"]
-    assert out.loc[2, "retained"] and not out.loc[2, "censored"]  # sigue activo 10 meses después
-    # el 3 cambia de suscripción el 1-jun (no es baja) y se va el 10-ago: 77 días después de la llamada
+    assert out.loc[2, "retained"] and not out.loc[2, "censored"]
+    # el 3 cambia de suscripción el 1-jun (no es baja) y se va el 10-ago
     assert out.loc[3, "days_to_churn"] == 77 and out.loc[3, "churned_90d"]
-    assert out.loc[4, "censored"] and not out.loc[4, "retained"]  # llamado hace 11 días: aún no se sabe
+    assert out.loc[4, "censored"] and not out.loc[4, "retained"]
 
 
 def test_team_contacted_next_month():

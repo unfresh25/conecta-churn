@@ -1,7 +1,9 @@
-"""Folds temporales: entrenamiento solo con cortes cuya etiqueta (90 días) ya se conocía en el corte de evaluación."""
+import numpy as np
 import pandas as pd
+import pytest
 
 from conecta.labels import monthly_cutoffs
+from conecta.models import evaluate_run, make_model, nested_tuning
 from conecta.validation import temporal_folds
 
 EVAL = [pd.Timestamp("2025-07-31"), pd.Timestamp("2025-08-31"), pd.Timestamp("2025-09-30")]
@@ -19,13 +21,6 @@ def test_no_overlap():
     for train, ev in temporal_folds(cutoffs, EVAL):
         assert max(train) + pd.Timedelta(days=90) <= ev
         assert ev not in train
-
-
-# --- Evaluación de corridas (Tarea 8) -----------------------------------------------------------
-import numpy as np
-import pytest
-
-from conecta.models import make_model, evaluate_run
 
 METRICS = ["auc_pr", "auc", "brier", "realized_value", "value_contact_all", "value_contact_none", "n_contacted"]
 
@@ -54,7 +49,7 @@ def test_evaluate_run_smoke(synthetic_panel, kind, calibration):
     res = evaluate_run(synthetic_panel, folds, kind, ["signal", "noise", "plan"], calibration=calibration)
     for m in METRICS:
         assert m in res and len(res["per_fold"][m]) == 3
-    assert 0 <= res["auc"] <= 1 and res["auc"] > 0.7      # la señal es fuerte: el modelo la debe encontrar
+    assert res["auc"] > 0.7
     assert res["value_contact_none"] == 0
     assert set(res["predictions"]["cutoff"]) == set(EVAL)
 
@@ -74,7 +69,7 @@ def test_evaluate_run_actionable_and_train_exclusion(synthetic_panel):
     assert res["realized_value_actionable"] <= res["realized_value"] + 1e-6 or res["n_in_process"] == 0
     assert (res["predictions"]["contact_actionable"] <= res["predictions"]["contact"]).all()
     excl = evaluate_run(pnl, folds, "gbm", ["signal", "noise", "plan"], train_exclude=pnl["churn_90d"] == 1)
-    assert excl["mean_p"] < res["mean_p"]     # sin positivos en entrenamiento la probabilidad se desploma
+    assert excl["mean_p"] < res["mean_p"]
 
 
 def test_make_model_custom_params(synthetic_panel):
@@ -83,7 +78,6 @@ def test_make_model_custom_params(synthetic_panel):
 
 
 def test_nested_tuning_smoke(synthetic_panel):
-    from conecta.models import nested_tuning
     earlier = synthetic_panel.assign(cutoff=synthetic_panel["cutoff"] - pd.offsets.MonthEnd(9))
     synthetic_panel = pd.concat([earlier, synthetic_panel], ignore_index=True)
     folds = temporal_folds(sorted(synthetic_panel["cutoff"].unique()), EVAL)

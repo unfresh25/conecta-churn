@@ -22,10 +22,8 @@ def test_clean_age():
 def test_clean_invoices_reload_vs_double_charge(invoices_df):
     out = clean_invoices(invoices_df)
     sept = out[out["periodo"] == "2025-09"].sort_values("factura_id")
-    # factura_id 1 cargada dos veces -> una sola fila, la de fecha_carga más temprana
     assert (out["factura_id"] == 1).sum() == 1
     assert out.loc[out["factura_id"] == 1, "fecha_carga"].iloc[0] == pd.Timestamp("2025-09-02 02:00:00")
-    # factura_id 2 (mismo cliente, periodo y suscripción, id distinto) -> cobro duplicado real
     assert sept["is_duplicate_charge"].tolist() == [False, True]
     assert len(out) == 3
 

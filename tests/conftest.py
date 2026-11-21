@@ -1,7 +1,3 @@
-"""Fixtures sintéticas mínimas que imitan las tablas de `conecta.db` y los JSON.
-
-Cada tarea agrega filas a medida que las necesita. Las columnas y tipos siguen a la fuente.
-"""
 import pandas as pd
 import pytest
 

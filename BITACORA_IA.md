@@ -1,36 +1,34 @@
 # Bitácora de uso de IA
 
-## Cómo se repartió el trabajo
+## Reparto del trabajo
 
-- **Herramienta:** Claude Code (modelo Claude Opus), en una sesión local con el repositorio. Los modelos de texto (strands-decider 2B y pysentimiento) corrieron en local, sin API keys.
-- **Reparto:** Claude propuso enfoques y **escribió el código**: módulos de `conecta/`, pruebas, notebook y documentos. Yo decidí cada punto de diseño, revisé el trabajo en cuatro pausas acordadas (después de las etiquetas, las variables, el modelado y las predicciones) y pedí correcciones o análisis adicionales.
-  - Al principio el plan era que yo escribiera el código. Lo cambié el 20-nov para usar el tiempo en revisar y decidir. Esta bitácora lo declara tal cual.
-- **Reglas que fijé:** identificadores de código en inglés, ninguna línea de coautoría de la IA en los commits, nada de datos de clientes en el repositorio y todo ejecutable gratis en Colab.
+Usé Claude Code (modelo Claude Opus) en una sesión local con el repositorio. Los modelos de texto, strands-decider 2B y pysentimiento, corrieron en local y sin API keys.
+
+Claude propuso enfoques y escribió el código: los módulos de `conecta/`, las pruebas, el notebook y los borradores de estos documentos. Yo tomé cada decisión de diseño, revisé el trabajo en cuatro pausas acordadas (después de las etiquetas, las variables, el modelado y las predicciones) y pedí correcciones o análisis adicionales. Al principio iba a escribir yo el código; el 20 de noviembre cambié el reparto para dedicar el tiempo a revisar y decidir.
+
+Las reglas que fijé: identificadores de código en inglés, ninguna línea de coautoría de la IA en los commits, ningún dato de clientes en el repositorio y todo ejecutable gratis en Colab.
 
 ## Momentos clave
 
-| # | Qué se pidió o propuso | Qué se aceptó, rechazó o corrigió, y por qué |
+| # | Qué se pidió o propuso | Qué pasó y por qué |
 |---|---|---|
-| 1 | Claude propuso entrenar solo con las 3 etiquetas entregadas (4.693 filas). | **Rechazado por mí.** Insistí en reconstruir el churn mensual desde `suscripciones`. Antes de usarlo pedí verificar la regla: reproduce el **100 %** de las etiquetas entregadas. Con eso hay 13.600 filas en 2025 y 26.308 desde 2023, en lugar de 4.693. |
-| 2 | Regla de contacto: umbral único, top-N o valor esperado por cliente. | Elegí **valor esperado por cliente** (umbral por plan). Agregué la pregunta de si las llamadas pasadas contaminan las etiquetas, que después se convirtió en la sección 6. |
-| 3 | Clasificar el texto de los tickets. Yo propuse probar strands-decider. | Lo corrió Claude contra 38 textos etiquetados a mano: tema 38/38 y amenaza de irse 37/38, pero **falló con el sarcasmo**, incluso cambiando la pregunta. |
-| 4 | Detectar el sarcasmo. | Propuse un modelo de NLP dedicado. Claude probó **pysentimiento** (ironía + emoción): 13 de 18 molestos con 1 falso positivo. Se quedó un esquema híbrido. |
-| 5 | Corte de ironía. | **Rechazado un corte ajustado a mano** a los 38 textos, porque sería sobreajustar a la referencia. Se usa el corte natural del modelo (0,5). |
-| 6 | Revisión humana de la clasificación: 7 textos donde el modelo y la referencia no coinciden (4 sarcasmos no detectados, 1 enojo en un reclamo de precio, 1 "bajar de plan" leído como amenaza). | Decidí **no corregirlos a mano**: el CSV es la salida reproducible del modelo, y los desacuerdos quedan como evidencia de sus límites. |
-| 7 | Cuatro corridas en MLflow: base, LightGBM completo, sin datos no estructurados e historial desde 2023. | Aceptado. El resultado **contradijo dos expectativas del diseño**: ganó el historial desde 2023 (3 de 3 meses) y la recalibración no ayudó. Apliqué la regla de selección fijada antes de ver los resultados, sin acomodarla a lo que esperaba. |
-| 8 | Claude escribió en el notebook que el historial "no gana en todos los meses" y que el modelo final "subestima" el churn. | **Corregido** al verificar con los números: ambas afirmaciones eran falsas. También se corrigieron cifras preliminares del diseño, como los duplicados por año (107/435/805 contaban copias de facturas recargadas; los reales son 47/224/428). |
-| 9 | Pregunté si el modelo es mejor que lo que hace hoy el equipo de retención. | Llevó a comparar contra la política actual y calcular el **punto de equilibrio**: el equipo necesita retener 6 % y retiene ~3 %; el modelo necesita ~21 %. De ahí sale la propuesta del **piloto con grupo de control**. |
-| 10 | Pregunté si se ajustaron hiperparámetros. | No se habían ajustado. Pedí probarlo bien: con un ajuste anidado, sin mirar los meses de evaluación, el valor **empeora** (10,3 M contra 13,9 M al mes). Se mantienen los parámetros fijos y queda documentado. |
-| 11 | Pedí analizar el efecto de las llamadas antes de decidir el modelo final. | Claude encontró que la llamada es parte del proceso de baja (siempre 3 a 19 días antes) y que había clientes censurados contados como "retenidos". Aprobé tres decisiones: no corregir las etiquetas (excluir a los llamados borraba la mitad de los casos de churn), quitar las variables de contacto del modelo y no contactar a quien ya está en proceso de baja. |
-| 12 | Bonus: propuse un dashboard con agente conversacional en Next.js. | Lo reduje a un dashboard en Streamlit, como último paso y solo si sobra tiempo. Si existe, el código lo escribió Claude. |
+| 1 | Claude propuso entrenar solo con las 3 etiquetas entregadas (4.693 filas). | Lo rechacé e insistí en reconstruir el churn mensual desde `suscripciones`. Antes de usarlo pedí verificar la regla, que reproduce el 100 % de las etiquetas entregadas. Así pasamos de 4.693 filas a 13.600 en 2025 y 26.308 desde 2023. |
+| 2 | Regla de contacto: umbral único, top-N o valor esperado por cliente. | Elegí el valor esperado por cliente, con umbral por plan. Agregué la pregunta de si las llamadas pasadas contaminan las etiquetas, que terminó siendo la sección 6. |
+| 3 | Clasificar el texto de los tickets con strands-decider, una propuesta mía. | Claude lo corrió contra 38 textos que etiqueté a mano: acertó el tema en 38 y la amenaza de irse en 37, pero falló con el sarcasmo aunque cambiamos la pregunta varias veces. |
+| 4 | Detectar el sarcasmo. | Propuse un modelo de NLP dedicado y Claude probó pysentimiento (ironía y emoción): detectó 13 de 18 molestos con 1 falso positivo. Quedó un esquema híbrido. |
+| 5 | Corte de ironía. | Rechacé un corte ajustado a mano a los 38 textos, porque sería ajustarlo a la misma muestra con que se evalúa. Se usa el corte natural del modelo, 0,5. |
+| 6 | Revisión de los 7 textos donde el modelo y mi referencia no coinciden: 4 sarcasmos no detectados, 1 enojo en un reclamo de precio, 1 "bajar de plan" leído como amenaza y 1 cancelación sin enojo detectado. | Decidí no corregirlos a mano. El CSV es la salida reproducible del modelo y los desacuerdos quedan como evidencia de sus límites. |
+| 7 | Cuatro corridas en MLflow: base, LightGBM completo, sin datos no estructurados e historial desde 2023. | El resultado contradijo dos supuestos del diseño: ganó el historial desde 2023, en los 3 meses, y la recalibración no ayudó. Apliqué la regla de selección que había fijado antes de ver los resultados. |
+| 8 | Afirmaciones de Claude en el notebook. | Al verificarlas con los números corregí varias que eran falsas: que el historial "no gana en todos los meses", que el modelo final "subestima" el churn, que el problema de la 5.2.0 "empieza en junio" (salió en septiembre) y que los 100 primeros del modelo se van "3 a 4 veces más" (son 2 a 2,7). También las cifras preliminares de duplicados por año: 107, 435 y 805 contaban copias de facturas recargadas; las reales son 47, 224 y 428. |
+| 9 | Pregunté si el modelo es mejor que lo que hace hoy el equipo de retención. | Comparamos con la política actual y calculamos el punto de equilibrio. El equipo necesita retener 6 % y retiene ~3 %; el modelo necesita ~21 %. De ahí sale el piloto con grupo de control. |
+| 10 | Pregunté si se habían ajustado hiperparámetros. | No se habían ajustado. Pedí probarlo sin mirar los meses de evaluación (ajuste anidado) y el valor empeoró: 10,3 M contra 13,9 M al mes. Se mantienen los parámetros fijos y el experimento queda en el notebook. |
+| 11 | Pedí analizar el efecto de las llamadas antes de elegir el modelo final. | Claude encontró que la llamada es parte del proceso de baja, siempre entre 3 y 19 días antes, y que había clientes censurados contados como retenidos. Aprobé tres decisiones: no corregir las etiquetas (excluir a los llamados borraba la mitad de los casos de churn), quitar las variables de contacto del modelo y no contactar a quien ya está en proceso de baja. |
+| 12 | Bonus: propuse un dashboard con agente conversacional en Next.js. | Lo reduje a un dashboard en Streamlit, solo si sobra tiempo. Si existe, el código lo escribió Claude. |
+| 13 | Pedí limpiar el código y la redacción. | Claude quitó los comentarios que no aportaban, dividió funciones largas y reescribió la prosa. Se verificó que el panel y `predicciones.csv` quedaran idénticos. |
 
-## Qué revisé yo personalmente
+## Qué revisé personalmente
 
-- La regla de etiquetas y su verificación al 100 %.
-- Las reglas contra fugas de información: cada variable con su prueba en `tests/test_features.py`.
-- La regla de selección de modelos y cada punto de decisión de negocio.
-- Los textos con desacuerdo de la clasificación.
-- Las cifras del memo contra las salidas del notebook.
+La regla de etiquetas y su verificación; las reglas contra fugas de información, cada una con su prueba en `tests/test_features.py`; la regla de selección de modelos y cada decisión de negocio; los textos en que la clasificación no coincide con mi referencia; y las cifras del memo contra las salidas del notebook.
 
 ## Horas invertidas
 
@@ -43,4 +41,4 @@
 | Revisión de datos, etiquetas y variables | _ |
 | Modelado, análisis de llamadas y decisión | _ |
 | Hallazgos, memo y documentación | _ |
-| **Total** | _ |
+| Total | _ |

@@ -1,4 +1,3 @@
-"""Contrato de predicciones.csv: una fila por cliente a puntuar, cliente_id, probabilidad en [0, 1], contactar 0/1."""
 import pandas as pd
 import pytest
 

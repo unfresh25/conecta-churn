@@ -31,7 +31,7 @@ def test_plan_change_is_not_churn(subs):
 
 def test_cancellation_inside_window_is_churn(subs):
     labels = build_labels(subs, [pd.Timestamp("2025-02-28")])
-    assert _label(labels, 2) == 1  # termina 2025-03-15 sin otra suscripción
+    assert _label(labels, 2) == 1
 
 
 def test_end_equal_to_cutoff_is_not_active(subs):
