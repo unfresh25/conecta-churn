@@ -27,7 +27,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/jupyter lab solucion.ipynb
 .venv/bin/pytest -q
 ```
-En macOS, LightGBM necesita `brew install libomp`. Las 68 pruebas cubren las reglas contra fugas de información, las etiquetas, la economía y el formato de las predicciones.
+En macOS, LightGBM necesita `brew install libomp`. Las 51 pruebas cubren la limpieza de datos, la reconstrucción de las etiquetas, los folds temporales, algunas reglas contra fugas (contactos, tickets y csat posteriores al corte), la economía y el formato de las predicciones.
 
 Las corridas de MLflow se guardan en `mlflow.db` (SQLite), porque MLflow 3 dejó en mantenimiento el backend de archivos. Para verlas: `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
 

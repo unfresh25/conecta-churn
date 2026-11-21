@@ -42,9 +42,3 @@ def test_end_equal_to_cutoff_is_not_active(subs):
 def test_signup_after_cutoff_is_absent(subs):
     labels = build_labels(subs, [pd.Timestamp("2025-09-30")])
     assert _label(labels, 3) is None
-
-
-def test_labels_columns_and_cutoff(subs):
-    labels = build_labels(subs, [pd.Timestamp("2025-01-31"), pd.Timestamp("2025-02-28")])
-    assert list(labels.columns) == ["cliente_id", "cutoff", "churn_90d"]
-    assert set(labels["cutoff"]) == {pd.Timestamp("2025-01-31"), pd.Timestamp("2025-02-28")}

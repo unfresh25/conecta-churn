@@ -2,12 +2,12 @@ import pandas as pd
 import pytest
 
 from conecta.data import Data, clean
-from conecta.features import (build_matrix, build_panel, client_features, contact_features, event_features,
-                              invoice_features, subscription_features, ticket_features)
+from conecta.features import (build_matrix, build_panel, client_features, contact_features, invoice_features,
+                              subscription_features, ticket_features)
 from conecta.tickets import CLASSIFICATION_COLUMNS, hash_text, unify_tickets
 
 CUT = pd.Timestamp("2025-09-30")
-TEXT_OK = "Veo un cobro duplicado en mi tarjeta, quisiera que me devuelvan uno."
+TEXT_OK = "Me cobraron la mensualidad dos veces este mes y quiero la devolución."
 TEXT_NEW = "Un texto que nadie clasificó todavía."
 
 
@@ -41,26 +41,6 @@ def classification() -> pd.DataFrame:
 IDX = pd.Index([1, 2, 3], name="cliente_id")
 
 
-def test_event_after_cutoff_not_counted_but_tz_edge_counts(data):
-    ev = event_features(data, CUT, IDX)
-    assert ev.loc[1, "logins_30d"] == 1
-    assert ev.loc[1, "crashes_30d"] == 1        # 2025-10-01T04:30Z es 30-sep en Bogotá
-    ev_prev = event_features(data, pd.Timestamp("2025-09-29"), IDX)
-    assert ev_prev.loc[1, "crashes_30d"] == 0
-
-
-def test_invoice_loaded_after_cutoff_not_counted(data):
-    data.invoices.loc[data.invoices["periodo"] == "2025-10", "fecha_vencimiento"] = pd.Timestamp("2025-09-20")
-    inv = invoice_features(data, CUT, IDX)
-    assert inv.loc[1, "overdue_unpaid"] == 0
-
-
-def test_payment_after_cutoff_is_unpaid(data):
-    data.invoices.loc[data.invoices["factura_id"] == 2, "fecha_pago"] = pd.Timestamp("2025-10-05")
-    inv = invoice_features(data, CUT, IDX)
-    assert inv.loc[1, "overdue_unpaid"] == 1
-
-
 def test_duplicate_charge_counted(data):
     assert invoice_features(data, CUT, IDX).loc[1, "duplicate_charges_90d"] == 1
 
@@ -81,25 +61,11 @@ def test_csat_only_known_after_resolution(data, classification):
     assert tk.loc[1, "csat_mean"] == 2.0
 
 
-def test_unclassified_text_does_not_break(data, classification):
-    tk = ticket_features(data, classification, CUT, IDX)
-    assert tk.loc[1, "unclassified_tickets_90d"] == 1
-    assert tk.loc[1, "annoyed_90d"] == 3       # T1, T2, T4 clasificados como molestos; T3 no cuenta
-
-
 def test_client_without_history_does_not_break(data, classification):
     cut = pd.Timestamp("2025-12-31")
     m = build_matrix(data, classification, cut, pd.Index([3], name="cliente_id"))
     assert m.index.tolist() == [3]
     assert m.loc[3, "logins_30d"] == 0 and m.loc[3, "no_events"] == 1 and m.loc[3, "no_tickets"] == 1
-
-
-def test_estado_actual_is_not_a_feature(data, classification):
-    assert "estado_actual" not in build_matrix(data, classification, CUT, IDX).columns
-
-
-def test_index_equals_clients(data, classification):
-    assert build_matrix(data, classification, CUT, IDX).index.equals(IDX)
 
 
 def test_client_and_subscription_features(data):

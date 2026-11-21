@@ -64,11 +64,11 @@ def events_df() -> pd.DataFrame:
 def tickets_raw() -> list[dict]:
     return [
         {"ticket_id": "TK-0000001", "customer": "CL-012375", "created_at": "2025-10-01T04:30:00Z",
-         "channel": "chat", "category": "cobro_doble", "text": "Veo un cobro duplicado en mi tarjeta, quisiera que me devuelvan uno.",
+         "channel": "chat", "category": "cobro_doble", "text": "Me cobraron la mensualidad dos veces este mes y quiero la devolución.",
          "status": "closed", "resolved_at": "2025-10-02T10:00:00Z", "csat": 4},
         {"id": "TK-0000002", "cliente": {"id": "12386", "segmento": "Personal"}, "fecha": "2025-09-30T23:30:00-05:00",
          "canal": "telefono", "tipo": {"principal": "facturacion", "sub": "cobro_doble"},
-         "mensajes": [{"autor": "cliente", "texto": "Me encanta pagar dos veces por lo mismo, muy buena estrategia la de ustedes jaja."},
-                      {"autor": "agente", "texto": "Lamentamos el inconveniente, estamos revisando su solicitud."}],
+         "mensajes": [{"autor": "cliente", "texto": "Qué maravilla que me cobren doble, gracias por nada."},
+                      {"autor": "agente", "texto": "Respuesta del agente."}],
          "estado": {"valor": "abierto", "fecha": None}},
     ]

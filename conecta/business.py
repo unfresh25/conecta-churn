@@ -76,7 +76,7 @@ def sensitivity(p: pd.Series, plan: pd.Series, effectivenesses=(0.2, 0.4, 0.6),
 def in_cancellation_process(X: pd.DataFrame, window_days: int = PROCESS_WINDOW_DAYS) -> pd.Series:
     """Llamado por el equipo de retención en los últimos `window_days` días o con ticket de cancelar en 90 días.
 
-    No se les recomienda contacto: ya los atiende el flujo de baja y el 95 % se va igual, así que el 40 % de
-    retención no tiene sustento para ellos.
+    No se les recomienda contacto: ya los atiende el flujo de baja y casi todos se van igual (sección 6 del
+    notebook), así que el 40 % de retención no tiene sustento para ellos.
     """
     return (X["days_since_contact"].le(window_days) | X["topic_cancelar_90d"].gt(0)).astype(bool)

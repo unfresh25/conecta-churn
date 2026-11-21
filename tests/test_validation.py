@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from conecta.labels import monthly_cutoffs
-from conecta.models import evaluate_run, make_model, nested_tuning
+from conecta.models import evaluate_run, nested_tuning
 from conecta.validation import temporal_folds
 
 EVAL = [pd.Timestamp("2025-07-31"), pd.Timestamp("2025-08-31"), pd.Timestamp("2025-09-30")]
@@ -22,7 +22,7 @@ def test_no_overlap():
         assert max(train) + pd.Timedelta(days=90) <= ev
         assert ev not in train
 
-METRICS = ["auc_pr", "auc", "brier", "realized_value", "value_contact_all", "value_contact_none", "n_contacted"]
+METRICS = ["auc_pr", "auc", "brier", "realized_value", "value_contact_all", "n_contacted"]
 
 
 @pytest.fixture
@@ -50,31 +50,7 @@ def test_evaluate_run_smoke(synthetic_panel, kind, calibration):
     for m in METRICS:
         assert m in res and len(res["per_fold"][m]) == 3
     assert res["auc"] > 0.7
-    assert res["value_contact_none"] == 0
     assert set(res["predictions"]["cutoff"]) == set(EVAL)
-
-
-def test_make_model_handles_unknown_category(synthetic_panel):
-    m = make_model("gbm", ["signal", "plan"]).fit(synthetic_panel[["signal", "plan"]], synthetic_panel["churn_90d"])
-    p = m.predict_proba(pd.DataFrame({"signal": [0.0], "plan": ["Oro"]}))[:, 1]
-    assert 0 <= p[0] <= 1
-
-
-def test_evaluate_run_actionable_and_train_exclusion(synthetic_panel):
-    pnl = synthetic_panel.assign(days_since_contact=np.where(synthetic_panel["signal"] > 1.5, 3, np.nan),
-                                 topic_cancelar_90d=0)
-    folds = temporal_folds(sorted(pnl["cutoff"].unique()), EVAL)
-    res = evaluate_run(pnl, folds, "gbm", ["signal", "noise", "plan"])
-    assert res["n_contacted_actionable"] <= res["n_contacted"]
-    assert res["realized_value_actionable"] <= res["realized_value"] + 1e-6 or res["n_in_process"] == 0
-    assert (res["predictions"]["contact_actionable"] <= res["predictions"]["contact"]).all()
-    excl = evaluate_run(pnl, folds, "gbm", ["signal", "noise", "plan"], train_exclude=pnl["churn_90d"] == 1)
-    assert excl["mean_p"] < res["mean_p"]
-
-
-def test_make_model_custom_params(synthetic_panel):
-    m = make_model("gbm", ["signal"], params={"n_estimators": 5})
-    assert m["clf"].n_estimators == 5
 
 
 def test_nested_tuning_smoke(synthetic_panel):

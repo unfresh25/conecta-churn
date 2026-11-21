@@ -30,8 +30,7 @@ def contact_outcomes(clients: pd.DataFrame, subscriptions: pd.DataFrame, today: 
         days = (churn - date).days if pd.notna(churn) else None
         churned = days is not None and days <= HORIZON_DAYS
         observable = date + pd.Timedelta(days=HORIZON_DAYS) <= today
-        rows.append({"cliente_id": cid, "contact_date": date, "active_at_contact": cid in active_at(subs, date),
-                     "churn_date": churn, "days_to_churn": days, "churned_90d": churned,
+        rows.append({"cliente_id": cid, "contact_date": date, "churn_date": churn, "days_to_churn": days, "churned_90d": churned,
                      "retained": not churned and observable, "censored": not churned and not observable})
     return pd.DataFrame(rows)
 

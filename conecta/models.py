@@ -146,7 +146,6 @@ def _fold_metrics(te: pd.DataFrame, p: np.ndarray) -> tuple[dict, pd.DataFrame]:
         "auc_pr": average_precision_score(y, p), "auc": roc_auc_score(y, p), "brier": brier_score_loss(y, p),
         "realized_value": realized_value(contact, y, plan),
         "value_contact_all": realized_value(np.ones(len(te), bool), y, plan),
-        "value_contact_none": 0.0,
         "value_oracle": realized_value(y, y, plan),
         "n_contacted": int(contact.sum()),
         "realized_value_actionable": realized_value(actionable, y, plan),

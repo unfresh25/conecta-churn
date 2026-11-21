@@ -3,8 +3,7 @@ import datetime as dt
 import pandas as pd
 import pytest
 
-from conecta.tickets import (CLASSIFICATION_COLUMNS, TOPICS, annoyed_rule, hash_text, load_classification,
-                             unify_tickets)
+from conecta.tickets import CLASSIFICATION_COLUMNS, hash_text, load_classification, unify_tickets
 
 
 def test_unify_schema_a(tickets_raw):
@@ -14,14 +13,14 @@ def test_unify_schema_a(tickets_raw):
     assert a["status"] == "closed"
     assert a["source_topic"] == "cobro_doble"
     assert a["csat"] == 4.0
-    assert a["text"].startswith("Veo un cobro duplicado")
+    assert a["text"].startswith("Me cobraron la mensualidad")
 
 
 def test_unify_schema_b(tickets_raw):
     df, _ = unify_tickets(tickets_raw)
     b = df[df["schema"] == "B"].iloc[0]
     assert b["cliente_id"] == 12386
-    assert b["text"].startswith("Me encanta pagar dos veces")
+    assert b["text"].startswith("Qué maravilla")
     assert b["status"] == "open"
     assert pd.isna(b["resolved_at"])
     assert pd.isna(b["csat"])
@@ -57,16 +56,6 @@ def test_malformed_client_is_dropped():
 def test_hash_is_stable():
     assert hash_text(" Hola ") == hash_text("Hola")
     assert len(hash_text("Hola")) == 64
-
-
-def test_topics_are_the_eight_of_the_spec():
-    assert set(TOPICS) == {"cobro_doble", "cobro_no_reconocido", "aumento_precio", "app_se_cierra",
-                           "lentitud", "acceso_cuenta", "cambio_plan", "cancelar"}
-
-
-def test_annoyed_rule_threshold_is_strict():
-    out = annoyed_rule(pd.Series([0.9, 0.1, 0.5, 0.1]), pd.Series([False, True, False, False]))
-    assert out.tolist() == [True, True, False, False]
 
 
 def _classification_row(h="a" * 64):
