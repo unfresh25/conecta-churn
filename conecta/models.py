@@ -22,7 +22,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from conecta.business import decide_contact, in_cancellation_process, realized_value
 from conecta.features import TOPIC_NAMES
-from conecta.validation import temporal_folds
 
 SEED = 42
 TRACKING_URI = "sqlite:///mlflow.db"
@@ -200,28 +199,6 @@ def log_run(name: str, params: dict, result: dict, model=None) -> str:
             mlflow.sklearn.log_model(model, name="model", skops_trusted_types=SKOPS_TRUSTED_TYPES,
                                      code_paths=[str(Path(__file__).parent)])
         return run.info.run_id
-
-
-def nested_tuning(panel: pd.DataFrame, folds: Folds, columns: list[str], grid: list[dict],
-                  inner_gap_months: int = 4) -> pd.DataFrame:
-    """En cada fold elige parámetros con una validación interna que solo usa datos anteriores, y compara
-    contra los parámetros fijos y contra el mejor en retrospectiva. La separación interna es de 4 meses:
-    un fin de enero más 90 días cae en mayo."""
-    cutoffs = sorted(panel["cutoff"].unique())
-
-    def value(params, train, ev):
-        te = panel[panel["cutoff"] == ev]
-        p = fit_model(panel, train, "gbm", columns, params=params).predict_proba(te[columns])[:, 1]
-        return realized_value(decide_contact(pd.Series(p), te["plan"]), te["churn_90d"].to_numpy(), te["plan"])
-
-    rows = []
-    for train, ev in folds:
-        (inner_train, inner_ev), = temporal_folds(cutoffs, [max(train)], gap_months=inner_gap_months)
-        chosen = max(grid, key=lambda g: value(g, inner_train, inner_ev))
-        rows.append({"cutoff": ev, "chosen_params": chosen, "value_default": value({}, train, ev),
-                     "value_tuned": value(chosen, train, ev),
-                     "value_best_hindsight": max(value(g, train, ev) for g in grid + [{}])})
-    return pd.DataFrame(rows)
 
 
 def validate_predictions(df: pd.DataFrame, expected_ids: set[int]) -> None:

@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from conecta.labels import monthly_cutoffs
-from conecta.models import evaluate_run, nested_tuning
+from conecta.models import evaluate_run
 from conecta.validation import temporal_folds
 
 EVAL = [pd.Timestamp("2025-07-31"), pd.Timestamp("2025-08-31"), pd.Timestamp("2025-09-30")]
@@ -52,13 +52,3 @@ def test_evaluate_run_smoke(synthetic_panel, kind, calibration):
     assert res["auc"] > 0.7
     assert set(res["predictions"]["cutoff"]) == set(EVAL)
 
-
-def test_nested_tuning_smoke(synthetic_panel):
-    earlier = synthetic_panel.assign(cutoff=synthetic_panel["cutoff"] - pd.offsets.MonthEnd(9))
-    synthetic_panel = pd.concat([earlier, synthetic_panel], ignore_index=True)
-    folds = temporal_folds(sorted(synthetic_panel["cutoff"].unique()), EVAL)
-    grid = [{"n_estimators": 20}, {"n_estimators": 60, "num_leaves": 7}]
-    out = nested_tuning(synthetic_panel, folds, ["signal", "noise", "plan"], grid)
-    assert len(out) == 3
-    assert {"chosen_params", "value_default", "value_tuned", "value_best_hindsight"} <= set(out.columns)
-    assert (out["value_best_hindsight"] >= out["value_tuned"] - 1e-6).all()

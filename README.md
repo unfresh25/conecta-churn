@@ -8,7 +8,7 @@ Solución de la prueba técnica de Ciencia de Datos (nivel Senior): un modelo de
 
 - La versión 5.2.0 de la app (solo Android, desde el 1-sep-2025) se cierra al abrir. Sus usuarios tienen 28 % de churn a 90 días, contra 11 % de los usuarios de Android que siguen en la versión anterior. Además hay cobros dobles reales y en aumento, y la retención llama demasiado tarde: el 98 % de los contactados se va igual.
 - Los logs y el texto de los tickets duplican el valor del modelo: 13,1 M contra 6,0 M COP al mes en el backtest, con el mismo modelo con y sin esas variables.
-- `predicciones.csv` marca a 634 de 1.556 clientes para contactar. Con el 40 % de efectividad del enunciado eso rinde ~16 M COP netos, pero ese 40 % no está probado, así que propongo un piloto con grupo de control.
+- `predicciones.csv` marca a 634 de 1.556 clientes para contactar. Con el 40 % de efectividad del enunciado eso rinde unos 16 M COP netos, pero ese 40 % no está probado, así que propongo un piloto con grupo de control.
 - El resumen para gerencia está en [`MEMO.md`](MEMO.md), y el uso de IA y las horas en [`BITACORA_IA.md`](BITACORA_IA.md).
 
 ## Cómo ejecutarlo
@@ -60,7 +60,7 @@ docs/superpowers/            diseño y plan de implementación
 | Datos de entrenamiento | Cortes mensuales reconstruidos, de marzo de 2023 a septiembre de 2025 | La regla reproduce el 100 % de las etiquetas entregadas y da 5 veces más filas |
 | Validación | Backtest en julio, agosto y septiembre de 2025, entrenando solo con cortes de 3 meses antes o más | Un cliente aparece en varios cortes y el churn cambia en el tiempo, así que la validación aleatoria sobreestima el desempeño |
 | Métrica de selección | Valor realizado en pesos | La decisión es económica y el AUC no la mide |
-| Modelo | LightGBM con parámetros fijos, sin variables de contacto y sin recalibrar | Ganó en el backtest; el ajuste anidado de hiperparámetros empeoraba el valor, y las variables de contacto dependen de la política actual |
+| Modelo | LightGBM con parámetros fijos, sin variables de contacto y sin recalibrar | Ganó en el backtest, y las variables de contacto dependen de la política actual |
 | Llamadas de retención | Las etiquetas no se corrigen y no se contacta a quien ya está en proceso de baja | La contaminación es menor al 1 %, y excluir a los llamados borra la mitad de los casos de churn |
 
 Los datos no están en el repositorio.
