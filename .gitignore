@@ -16,3 +16,4 @@ __pycache__/
 docs/superpowers/spikes/
 # Workspace del ejecutor del plan
 .superpowers/
+.env
