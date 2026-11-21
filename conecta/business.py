@@ -67,3 +67,26 @@ def sensitivity(p: pd.Series, plan: pd.Series, effectivenesses=(0.2, 0.4, 0.6),
         rows.append({"effectiveness": ef, "n_contacted": int(contact.sum()),
                      "expected_value_total": float(ev[contact].sum())})
     return pd.DataFrame(rows)
+
+
+PROCESS_WINDOW_DAYS = 30
+
+
+def in_cancellation_process(X: pd.DataFrame, window_days: int = PROCESS_WINDOW_DAYS) -> pd.Series:
+    """Cliente que ya está en el flujo de baja en el corte: el equipo de retención lo llamó en los últimos
+    `window_days` días o tiene un ticket de "cancelar" en los últimos 90.
+
+    A estos clientes no se les recomienda contacto: el equipo ya los atiende y el 95 % se va igual (sección 6),
+    así que suponer una retención del 40 % para ellos no tiene sustento.
+    """
+    recent_call = X["days_since_contact"].le(window_days)
+    cancel_ticket = X["topic_cancelar_90d"].gt(0)
+    return (recent_call | cancel_ticket).astype(bool)
+
+
+def break_even_effectiveness(contact: pd.Series, churn: pd.Series, plan: pd.Series,
+                             cost: float = CONTACT_COST) -> float:
+    """Efectividad mínima de la llamada para que una lista de contactos no pierda plata (según el churn observado)."""
+    c = pd.Series(contact).to_numpy().astype(bool)
+    retained_if_all = (pd.Series(churn).to_numpy() * VALUE_MONTHS * _price(plan))[c].sum()
+    return float(cost * c.sum() / retained_if_all) if retained_if_all > 0 else float("inf")

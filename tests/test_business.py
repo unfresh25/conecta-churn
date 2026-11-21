@@ -45,3 +45,19 @@ def test_sensitivity():
     assert s["effectiveness"].tolist() == [0.2, 0.4, 0.6]
     assert s["n_contacted"].is_monotonic_increasing
     assert {"effectiveness", "n_contacted", "expected_value_total"} <= set(s.columns)
+
+
+def test_in_cancellation_process():
+    from conecta.business import in_cancellation_process
+    X = pd.DataFrame({"days_since_contact": [5, 31, None, None, 30],
+                      "topic_cancelar_90d": [0, 0, 1, 0, 0]})
+    assert in_cancellation_process(X).tolist() == [True, False, True, False, True]
+
+
+def test_break_even_effectiveness():
+    from conecta.business import break_even_effectiveness
+    # 2 contactados Basico, 1 se iba: equilibrio cuando ef*12*23900 = 2*25000
+    be = break_even_effectiveness(pd.Series([1, 1, 0]), pd.Series([1, 0, 1]), pd.Series(["Basico"] * 3))
+    assert be == pytest.approx(50_000 / (12 * 23_900))
+    assert realized_value(pd.Series([1, 1, 0]), pd.Series([1, 0, 1]), pd.Series(["Basico"] * 3),
+                          effectiveness=be) == pytest.approx(0, abs=1e-6)

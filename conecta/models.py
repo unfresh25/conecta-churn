@@ -23,7 +23,7 @@ from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_s
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from conecta.business import decide_contact, realized_value
+from conecta.business import decide_contact, in_cancellation_process, realized_value
 from conecta.features import TOPIC_NAMES
 
 SEED = 42
@@ -39,6 +39,8 @@ TICKET_FEATURES = (["tickets_30d", "tickets_90d"] + [f"topic_{t}_90d" for t in T
                    + ["annoyed_90d", "threats_90d", "unclassified_tickets_90d", "open_tickets", "csat_mean",
                       "days_since_last_ticket", "no_tickets"])
 UNSTRUCTURED_FEATURES = EVENT_FEATURES + TICKET_FEATURES
+# Variables que describen la política actual de llamadas: si la política cambia, cambian de significado (sección 6)
+CONTACT_FEATURES = ["contacted_before", "days_since_contact"]
 
 GBM_PARAMS = dict(n_estimators=400, learning_rate=0.03, num_leaves=15, min_child_samples=40, subsample=0.8,
                   subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0, random_state=SEED, verbose=-1)
@@ -73,7 +75,7 @@ def _categorical(cols: list[str], X: pd.DataFrame | None = None) -> list[str]:
     return [c for c in cols if c in known or (X is not None and X[c].dtype == object)]
 
 
-def make_model(kind: Literal["base", "gbm"], columns: list[str]) -> Pipeline:
+def make_model(kind: Literal["base", "gbm"], columns: list[str], params: dict | None = None) -> Pipeline:
     if kind == "base":
         cat = _categorical(columns)
         num = [c for c in columns if c not in cat]
@@ -86,7 +88,7 @@ def make_model(kind: Literal["base", "gbm"], columns: list[str]) -> Pipeline:
         return Pipeline([("prep", prep), ("clf", LogisticRegression(max_iter=2000, C=1.0))])
     if kind == "gbm":
         from lightgbm import LGBMClassifier
-        return Pipeline([("cat", _AsCategory()), ("clf", LGBMClassifier(**GBM_PARAMS))])
+        return Pipeline([("cat", _AsCategory()), ("clf", LGBMClassifier(**{**GBM_PARAMS, **(params or {})}))])
     raise ValueError(f"Tipo de modelo desconocido: {kind}")
 
 
@@ -109,10 +111,10 @@ class CalibratedModel:
 
 
 def fit_model(panel: pd.DataFrame, train_cutoffs: list[pd.Timestamp], kind: str, columns: list[str],
-              calibration: str | None = None) -> CalibratedModel:
+              calibration: str | None = None, params: dict | None = None) -> CalibratedModel:
     """Entrena con los cortes indicados. Con calibration="recent", calibra con el último de ellos."""
     train = panel[panel["cutoff"].isin(train_cutoffs)]
-    model = make_model(kind, columns).fit(train[columns], train["churn_90d"])
+    model = make_model(kind, columns, params).fit(train[columns], train["churn_90d"])
     if calibration is None:
         return CalibratedModel(model, None)
     if calibration != "recent":
@@ -122,21 +124,30 @@ def fit_model(panel: pd.DataFrame, train_cutoffs: list[pd.Timestamp], kind: str,
         raise ValueError("La calibración 'recent' necesita al menos dos cortes de entrenamiento")
     early = panel[panel["cutoff"].isin(cuts[:-1])]
     last = panel[panel["cutoff"] == cuts[-1]]
-    p_last = make_model(kind, columns).fit(early[columns], early["churn_90d"]).predict_proba(last[columns])[:, 1]
+    p_last = make_model(kind, columns, params).fit(early[columns], early["churn_90d"]).predict_proba(last[columns])[:, 1]
     calibrator = LogisticRegression(C=1e6, max_iter=1000).fit(_logit(p_last), last["churn_90d"])
     return CalibratedModel(model, calibrator)
 
 
 def evaluate_run(panel: pd.DataFrame, folds: list[tuple[list[pd.Timestamp], pd.Timestamp]], kind: str,
-                 columns: list[str], calibration: str | None = None) -> dict:
-    """Backtest: por fold y en promedio, métricas de ranking, de calibración y de valor (COP)."""
+                 columns: list[str], calibration: str | None = None, params: dict | None = None,
+                 train_exclude: pd.Series | None = None) -> dict:
+    """Backtest: por fold y en promedio, métricas de ranking, de calibración y de valor (COP).
+
+    `train_exclude` (booleano alineado con `panel`) saca filas del entrenamiento, nunca de la evaluación.
+    El valor "accionable" deja fuera de la lista a quien ya está en proceso de baja (ver `in_cancellation_process`).
+    """
     rows, preds = [], []
+    train_panel = panel if train_exclude is None else panel[~train_exclude.reindex(panel.index).fillna(False).astype(bool)]
     for train_cutoffs, ev in folds:
-        model = fit_model(panel, train_cutoffs, kind, columns, calibration)
+        model = fit_model(train_panel, train_cutoffs, kind, columns, calibration, params)
         te = panel[panel["cutoff"] == ev]
         y, plan = te["churn_90d"].to_numpy(), te["plan"]
         p = model.predict_proba(te[columns])[:, 1]
         contact = decide_contact(pd.Series(p), plan)
+        in_process = in_cancellation_process(te).to_numpy() if {"days_since_contact", "topic_cancelar_90d"} <= set(te) \
+            else np.zeros(len(te), bool)
+        actionable = contact.to_numpy().astype(bool) & ~in_process
         rows.append({
             "cutoff": ev, "n": len(te), "churn_rate": y.mean(), "mean_p": p.mean(),
             "auc_pr": average_precision_score(y, p), "auc": roc_auc_score(y, p), "brier": brier_score_loss(y, p),
@@ -145,12 +156,18 @@ def evaluate_run(panel: pd.DataFrame, folds: list[tuple[list[pd.Timestamp], pd.T
             "value_contact_none": 0.0,
             "value_oracle": realized_value(y, y, plan),
             "n_contacted": int(contact.sum()),
+            "realized_value_actionable": realized_value(actionable, y, plan),
+            "n_contacted_actionable": int(actionable.sum()),
+            "n_in_process": int((contact.to_numpy().astype(bool) & in_process).sum()),
+            "value_contact_all_actionable": realized_value(~in_process, y, plan),
         })
         preds.append(pd.DataFrame({"cliente_id": te["cliente_id"].to_numpy(), "cutoff": ev, "churn_90d": y,
-                                   "plan": plan.to_numpy(), "p": p, "contact": contact.to_numpy()}))
+                                   "plan": plan.to_numpy(), "p": p, "contact": contact.to_numpy(),
+                                   "in_process": in_process, "contact_actionable": actionable.astype(int)}))
     per_fold = pd.DataFrame(rows)
     metrics = per_fold.drop(columns="cutoff").mean().to_dict()
     metrics["realized_value_std"] = float(per_fold["realized_value"].std())
+    metrics["realized_value_actionable_std"] = float(per_fold["realized_value_actionable"].std())
     return {**metrics, "per_fold": per_fold, "predictions": pd.concat(preds, ignore_index=True)}
 
 
@@ -166,7 +183,8 @@ def log_run(name: str, params: dict, result: dict, model=None) -> str:
         per_fold = result["per_fold"]
         for _, r in per_fold.iterrows():
             tag = f"{r['cutoff']:%Y_%m}"
-            mlflow.log_metrics({f"{m}_{tag}": float(r[m]) for m in ["auc_pr", "auc", "brier", "realized_value"]})
+            mlflow.log_metrics({f"{m}_{tag}": float(r[m])
+                                for m in ["auc_pr", "auc", "brier", "realized_value", "realized_value_actionable"]})
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "per_fold.csv"
             per_fold.to_csv(path, index=False)
@@ -174,3 +192,31 @@ def log_run(name: str, params: dict, result: dict, model=None) -> str:
         if model is not None:
             mlflow.sklearn.log_model(model, name="model")
         return run.info.run_id
+
+
+def nested_tuning(panel: pd.DataFrame, folds: list[tuple[list[pd.Timestamp], pd.Timestamp]], columns: list[str],
+                  grid: list[dict], inner_gap_months: int = 4) -> pd.DataFrame:
+    """¿Ajustar hiperparámetros mejora el valor? Ajuste anidado y honesto.
+
+    Para cada fold, los parámetros se eligen con una validación interna que solo usa datos anteriores: se evalúa en el
+    último corte de entrenamiento, entrenando con cortes `inner_gap_months` antes (4 y no 3, porque un fin de enero + 90
+    días cae en mayo). Se compara contra los parámetros fijos y contra el mejor en retrospectiva (techo con trampa).
+    """
+    from conecta.validation import temporal_folds
+
+    cutoffs = sorted(panel["cutoff"].unique())
+
+    def value(params, train, ev):
+        model = fit_model(panel, train, "gbm", columns, params=params)
+        te = panel[panel["cutoff"] == ev]
+        p = model.predict_proba(te[columns])[:, 1]
+        return realized_value(decide_contact(pd.Series(p), te["plan"]), te["churn_90d"].to_numpy(), te["plan"])
+
+    rows = []
+    for train, ev in folds:
+        (inner_train, inner_ev), = temporal_folds(cutoffs, [max(train)], gap_months=inner_gap_months)
+        chosen = max(grid, key=lambda g: value(g, inner_train, inner_ev))
+        rows.append({"cutoff": ev, "chosen_params": chosen, "value_default": value({}, train, ev),
+                     "value_tuned": value(chosen, train, ev),
+                     "value_best_hindsight": max(value(g, train, ev) for g in grid + [{}])})
+    return pd.DataFrame(rows)
