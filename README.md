@@ -27,11 +27,26 @@ python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/jupyter lab solucion.ipynb
 .venv/bin/pytest -q
 ```
-En macOS, LightGBM necesita `brew install libomp`. Las 51 pruebas cubren la limpieza de datos, la reconstrucción de las etiquetas, los folds temporales, algunas reglas contra fugas (contactos, tickets y csat posteriores al corte), la economía y el formato de las predicciones.
+En macOS, LightGBM necesita `brew install libomp`. Las 53 pruebas cubren la limpieza de datos, la reconstrucción de las etiquetas, los folds temporales, algunas reglas contra fugas (contactos, tickets y csat posteriores al corte), la economía, el formato de las predicciones y los factores de riesgo del dashboard.
 
 Las corridas de MLflow se guardan en `mlflow.db` (SQLite), porque MLflow 3 dejó en mantenimiento el backend de archivos. Para verlas: `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
 
 La clasificación del texto de los tickets (tema, amenaza de irse, ironía y enojo) está en `data_derivada/tickets_clasificados.csv`, indexada por un hash del texto y sin textos de clientes. El notebook la usa por defecto. Para regenerarla hay que poner `RECALCULATE_NLP = True` en la sección 3, lo que requiere `pysentimiento` y un servidor local de `strands-decider` (Python 3.12 o posterior).
+
+## Dashboard (bonus)
+
+`dashboard/app.py` es un dashboard en Streamlit para el equipo de retención:
+- la lista de a quién llamar, con filtros por plan, segmento y plataforma;
+- la ficha de cada cliente, con los tres factores que más suben su riesgo;
+- un resumen por plan;
+- controles de efectividad y costo que recalculan la lista con las mismas funciones del notebook.
+
+Lee solo `dashboard/clientes_dashboard.csv`, que exporta la sección 7 del notebook, sin ciudad, edad ni textos de tickets. Para correrlo en local:
+
+```bash
+.venv/bin/pip install -r dashboard/requirements.txt
+.venv/bin/streamlit run dashboard/app.py
+```
 
 ## Estructura
 
@@ -46,6 +61,8 @@ conecta/
   business.py                economía del contacto, regla por plan y punto de equilibrio
   models.py                  modelos, backtest con valor en pesos, MLflow y validación de predicciones
   retention.py               desenlace de las llamadas de retención
+  factors.py                 factores de riesgo por cliente (SHAP) en palabras, para el dashboard
+dashboard/                   dashboard en Streamlit y los datos que exporta el notebook
 tests/                       pruebas con pytest
 data_derivada/               clasificación de tickets cacheada, sin textos
 predicciones.csv             cliente_id, probabilidad, contactar (1.556 filas)

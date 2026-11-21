@@ -1,0 +1,5 @@
+# Dependencias del dashboard (Streamlit Community Cloud las instala desde aquí)
+streamlit==1.67.0
+pandas==2.2.3
+numpy==2.4.6
+altair==6.3.0
