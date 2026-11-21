@@ -35,17 +35,18 @@ La clasificación del texto de los tickets (tema, amenaza de irse, ironía y eno
 
 ## Dashboard (bonus)
 
-`dashboard/app.py` es un dashboard en Streamlit para el equipo de retención:
+**https://unfresh25.github.io/conecta-churn/**
+
+Dashboard en Next.js para el equipo de retención:
 - la lista de a quién llamar, con filtros por plan, segmento y plataforma;
 - la ficha de cada cliente, con los tres factores que más suben su riesgo;
-- un resumen por plan;
-- controles de efectividad y costo que recalculan la lista con las mismas funciones del notebook.
+- un resumen por plan y segmento;
+- controles de efectividad y costo que recalculan la lista en el navegador con la misma regla del notebook.
 
-Lee solo `dashboard/clientes_dashboard.csv`, que exporta la sección 7 del notebook, sin ciudad, edad ni textos de tickets. Para correrlo en local:
+Lee solo `dashboard/data/clientes.json`, que exporta la sección 7 del notebook, sin ciudad, edad ni textos de tickets. `bun run check` comprueba que la regla en TypeScript da la misma decisión que el notebook para cada cliente. Se publica en GitHub Pages con `.github/workflows/dashboard.yml` en cada cambio de `dashboard/`. Para correrlo en local, con [Bun](https://bun.sh):
 
 ```bash
-.venv/bin/pip install -r dashboard/requirements.txt
-.venv/bin/streamlit run dashboard/app.py
+cd dashboard && bun install && bun run dev
 ```
 
 ## Estructura
@@ -62,7 +63,7 @@ conecta/
   models.py                  modelos, backtest con valor en pesos, MLflow y validación de predicciones
   retention.py               desenlace de las llamadas de retención
   factors.py                 factores de riesgo por cliente (SHAP) en palabras, para el dashboard
-dashboard/                   dashboard en Streamlit y los datos que exporta el notebook
+dashboard/                   dashboard en Next.js y los datos que exporta el notebook
 tests/                       pruebas con pytest
 data_derivada/               clasificación de tickets cacheada, sin textos
 predicciones.csv             cliente_id, probabilidad, contactar (1.556 filas)
