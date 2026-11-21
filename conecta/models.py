@@ -190,7 +190,11 @@ def log_run(name: str, params: dict, result: dict, model=None) -> str:
             per_fold.to_csv(path, index=False)
             mlflow.log_artifact(str(path))
         if model is not None:
-            mlflow.sklearn.log_model(model, name="model")
+            # skops (formato seguro por defecto de MLflow 3) exige declarar los tipos propios del pipeline
+            trusted = ["collections.OrderedDict", "conecta.models._AsCategory", "lightgbm.basic.Booster",
+                       "lightgbm.sklearn.LGBMClassifier"]
+            mlflow.sklearn.log_model(model, name="model", skops_trusted_types=trusted,
+                                     code_paths=[str(Path(__file__).parent)])
         return run.info.run_id
 
 
@@ -220,3 +224,25 @@ def nested_tuning(panel: pd.DataFrame, folds: list[tuple[list[pd.Timestamp], pd.
                      "value_tuned": value(chosen, train, ev),
                      "value_best_hindsight": max(value(g, train, ev) for g in grid + [{}])})
     return pd.DataFrame(rows)
+
+
+PREDICTION_COLUMNS = ["cliente_id", "probabilidad", "contactar"]
+
+
+def validate_predictions(df: pd.DataFrame, expected_ids: set[int]) -> None:
+    """Valida el contrato de predicciones.csv; lanza ValueError con el problema concreto."""
+    if list(df.columns) != PREDICTION_COLUMNS:
+        raise ValueError(f"Las columnas deben ser exactamente {PREDICTION_COLUMNS}, se recibió {list(df.columns)}")
+    ids = df["cliente_id"]
+    if ids.duplicated().any():
+        raise ValueError(f"cliente_id duplicados: {sorted(ids[ids.duplicated()].unique())[:5]}")
+    missing, extra = set(expected_ids) - set(ids), set(ids) - set(expected_ids)
+    if missing:
+        raise ValueError(f"faltan {len(missing)} clientes a puntuar, p. ej. {sorted(missing)[:5]}")
+    if extra:
+        raise ValueError(f"sobran {len(extra)} clientes que no están en clientes_a_puntuar, p. ej. {sorted(extra)[:5]}")
+    p = df["probabilidad"]
+    if p.isna().any() or not p.between(0, 1).all():
+        raise ValueError("probabilidad debe estar en [0, 1] y sin vacíos")
+    if not df["contactar"].isin([0, 1]).all():
+        raise ValueError("contactar solo puede valer 0 o 1")
