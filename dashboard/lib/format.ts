@@ -14,3 +14,6 @@ export function cop(v: number): string {
 }
 
 export const signed = (v: number, f: (x: number) => string) => (v > 0 ? `+${f(v)}` : v < 0 ? f(v) : "sin cambio");
+
+/** Siempre en millones: "0,6 M". */
+export const copM = (v: number) => `${v < 0 ? "−" : ""}${oneDecimal.format(Math.abs(v) / 1e6)} M`;

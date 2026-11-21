@@ -7,13 +7,22 @@
     "check": "bun run scripts/check.ts"
   },
   "dependencies": {
+    "@heroui/react": "3.2.7",
+    "@heroui/styles": "3.2.7",
+    "@internationalized/date": "3.12.4",
+    "@react-aria/ssr": "3.10.1",
+    "@react-aria/utils": "3.34.1",
     "next": "15.5.29",
     "react": "19.3.1",
+    "react-aria": "3.53.1",
+    "react-aria-components": "1.22.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
+    "tailwindcss": "4.3.5",
     "typescript": "5.9.3"
   }
 }

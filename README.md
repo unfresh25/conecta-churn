@@ -37,7 +37,7 @@ La clasificación del texto de los tickets (tema, amenaza de irse, ironía y eno
 
 **https://unfresh25.github.io/conecta-churn/**
 
-Dashboard en Next.js para el equipo de retención:
+Dashboard en Next.js con componentes de HeroUI v3, para el equipo de retención:
 - la lista de a quién llamar, con filtros por plan, segmento y plataforma;
 - la ficha de cada cliente, con los tres factores que más suben su riesgo;
 - un resumen por plan y segmento;

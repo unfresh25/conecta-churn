@@ -16,6 +16,8 @@ El modelo marca a 634 de los 1.556 clientes activos para contactar (archivo `pre
 
 Si la llamada convence al 40 % de quienes iban a irse, como supone el enunciado, la lista rinde unos 16 millones de pesos netos después de pagar otros 16 millones en llamadas. Todo depende de ese 40 %. Con un 20 %, la lista baja a 237 clientes y rinde unos 3 millones; con un 10 %, casi ningún cliente justifica la llamada. Por eso propongo el piloto antes de llamar a toda la lista.
 
+La lista, cliente por cliente y con los motivos de su riesgo, se puede consultar y filtrar en el tablero: https://unfresh25.github.io/conecta-churn/. Ahí también se puede cambiar el 40 % y ver cómo cambia la lista.
+
 ## Qué tan confiable es
 
 - El modelo sabe a quién mirar. En una prueba que simula su uso en julio, agosto y septiembre, los 100 clientes que marcó como más riesgosos cada mes, sin contar a los que ya estaban en proceso de baja, se fueron entre 1,6 y 2,2 veces más que el promedio (de 24 % a 36 %, contra 15 % a 17 %). No adivina quién se va; ordena el riesgo.
